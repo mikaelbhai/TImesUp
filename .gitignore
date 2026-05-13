@@ -1,0 +1,11 @@
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.zip
+*.msix
+font_b64.txt
+Pixelify_Sans.zip
+python-manager-*.msix
