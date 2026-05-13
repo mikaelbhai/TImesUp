@@ -54,6 +54,28 @@ schtasks /create /tn "TimesUp Alert" /tr "\"%LOCALAPPDATA%\TimesUp\TimesUp.exe\"
 | **3** List alerts | Show all existing TimesUp scheduled tasks |
 | **4** Remove alert | Delete a scheduled task by name |
 | **5** Build EXE only | Compile without scheduling |
+| **7** Forever Snooze setup | Quick-create a snooze-mode alert (see below) |
+
+---
+
+## Forever Snooze Mode
+
+Enable this to make the alert **inescapable** — the user cannot dismiss it, only delay it.
+
+- The **CANCEL** button is replaced with **SNOOZE (5 MIN)**
+- Clicking Snooze schedules the alert to fire again exactly 5 minutes later via Task Scheduler
+- This repeats until the user clicks **SHUT DOWN**
+- Escape key is still bound to Snooze (not dismiss) in this mode
+
+**To enable:** choose option **[7]** in the setup wizard, or answer **Y** to the snooze prompt when creating any alert via options 1 or 2.
+
+**To enable manually** (command line):
+
+```bat
+schtasks /create /tn "TimesUp Snooze" /tr "\"%LOCALAPPDATA%\TimesUp\TimesUp.exe\" --snooze" /sc daily /st 22:00 /f
+```
+
+The `--snooze` flag is what activates the mode.
 
 ---
 

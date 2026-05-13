@@ -37,15 +37,17 @@ echo  %WHT%[2]%RST% Add / update a scheduled alert only
 echo  %WHT%[3]%RST% List existing alerts
 echo  %WHT%[4]%RST% Remove an alert
 echo  %WHT%[5]%RST% Build EXE only
+echo  %RED%[7]%RST% Set up Forever Snooze alert %DIM%(user cannot dismiss — 5-min re-alert)%RST%
 echo  %WHT%[6]%RST% Exit
 echo.
-set /p "CHOICE=  Choose an option [1-6]: "
+set /p "CHOICE=  Choose an option [1-7]: "
 
 if "%CHOICE%"=="1" goto FULL_INSTALL
 if "%CHOICE%"=="2" goto ADD_TASK_ONLY
 if "%CHOICE%"=="3" goto LIST_TASKS
 if "%CHOICE%"=="4" goto REMOVE_TASK
 if "%CHOICE%"=="5" goto BUILD_ONLY
+if "%CHOICE%"=="7" goto SNOOZE_SETUP
 if "%CHOICE%"=="6" goto END
 echo %RED%  Invalid choice.%RST%
 pause & goto :eof
@@ -123,6 +125,29 @@ pause
 goto :eof
 
 :: ═══════════════════════════════════════════════════════════════════════════
+:: ═══════════════════════════════════════════════════════════════════════════
+:SNOOZE_SETUP
+echo.
+echo %RED%  !! Forever Snooze Mode !!%RST%
+echo %DIM%  ────────────────────────────────────────────────────────%RST%
+echo  When the alert fires, the user sees %RED%SHUT DOWN%RST% and %YLW%SNOOZE (5 MIN)%RST%.
+echo  Cancelling is %RED%NOT possible%RST% — snooze re-schedules the alert 5 min later.
+echo  This loops until the user clicks SHUT DOWN.
+echo.
+if not exist "%INSTALL_EXE%" (
+    echo %YLW%  TimesUp.exe not installed. Building and installing now...%RST%
+    if not exist "%EXE_SRC%" (
+        call :BUILD_EXE
+        if errorlevel 1 goto END
+    )
+    call :DO_INSTALL
+    if errorlevel 1 goto END
+)
+set "SNOOZE_ARG= --snooze"
+call :COLLECT_TIME_NOPROMPT
+call :CREATE_TASK
+goto DONE
+
 ::  SUBROUTINES
 :: ═══════════════════════════════════════════════════════════════════════════
 
@@ -170,6 +195,7 @@ echo %GRN%  Installed to: %INSTALL_EXE%%RST%
 exit /b 0
 
 :COLLECT_TIME
+set "SNOOZE_ARG="
 echo.
 echo %WHT%  Configure your alert%RST%
 echo %DIM%  ─────────────────────%RST%
@@ -200,6 +226,47 @@ if /i "%SCHED_TYPE%"=="W" (
     echo  Day of week: MON TUE WED THU FRI SAT SUN
     set /p "WEEK_DAY=  Day: "
 )
+
+echo.
+echo  %RED%Forever Snooze Mode:%RST% user sees SNOOZE instead of Cancel —
+echo  re-alerts every 5 min until they click SHUT DOWN.
+set /p "SNOOZE_CHOICE=  Enable Forever Snooze? [Y/N, default N]: "
+if /i "!SNOOZE_CHOICE!"=="Y" (
+    set "SNOOZE_ARG= --snooze"
+    echo %YLW%  Snooze mode ON — user cannot dismiss the alert.%RST%
+)
+exit /b 0
+
+:: Same as COLLECT_TIME but skips the snooze prompt (snooze already set by caller)
+:COLLECT_TIME_NOPROMPT
+echo.
+echo %WHT%  Configure your Forever Snooze alert%RST%
+echo %DIM%  ─────────────────────────────────────%RST%
+echo.
+echo  Schedule type:
+echo   %WHT%[D]%RST% Daily at a fixed time
+echo   %WHT%[W]%RST% Weekly (choose day + time)
+echo   %WHT%[O]%RST% Once (one-time alert)
+echo.
+set /p "SCHED_TYPE=  Choose [D/W/O]: "
+
+set /p "TASK_LABEL=  Alert name [default: TimesUp Snooze]: "
+if "%TASK_LABEL%"=="" set "TASK_LABEL=TimesUp Snooze"
+
+echo.
+:ASK_TIME_SNOOZE
+set /p "ALERT_TIME=  First alert time (24h HH:MM): "
+echo %ALERT_TIME% | findstr /r "^[0-2][0-9]:[0-5][0-9]$" >nul
+if errorlevel 1 (
+    echo %RED%  Invalid format. Use HH:MM (e.g. 22:30)%RST%
+    goto ASK_TIME_SNOOZE
+)
+
+if /i "%SCHED_TYPE%"=="W" (
+    echo.
+    echo  Day of week: MON TUE WED THU FRI SAT SUN
+    set /p "WEEK_DAY=  Day: "
+)
 exit /b 0
 
 :CREATE_TASK
@@ -207,7 +274,7 @@ set "SC_PARAM=/sc daily"
 if /i "%SCHED_TYPE%"=="W" set "SC_PARAM=/sc weekly /d %WEEK_DAY%"
 if /i "%SCHED_TYPE%"=="O" set "SC_PARAM=/sc once"
 
-schtasks /create /tn "%TASK_LABEL%" /tr "\"%INSTALL_EXE%\"" %SC_PARAM% /st %ALERT_TIME% /f >nul 2>&1
+schtasks /create /tn "%TASK_LABEL%" /tr "\"%INSTALL_EXE%\"%SNOOZE_ARG%" %SC_PARAM% /st %ALERT_TIME% /f >nul 2>&1
 if errorlevel 1 (
     echo %RED%  [ERROR] Could not create scheduled task. Try running as Administrator.%RST%
     pause
@@ -219,6 +286,9 @@ echo.
 echo  %WHT%Task name:%RST%   %TASK_LABEL%
 echo  %WHT%Runs:%RST%        %SCHED_TYPE% at %ALERT_TIME%
 echo  %WHT%Launches:%RST%    %INSTALL_EXE%
+if not "!SNOOZE_ARG!"=="" (
+    echo  %RED%Mode:%RST%        Forever Snooze — re-alerts every 5 min until shutdown
+)
 echo.
 echo %DIM%  Manage in: Task Scheduler → Task Scheduler Library%RST%
 exit /b 0

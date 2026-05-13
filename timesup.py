@@ -1,5 +1,8 @@
 import tkinter as tk
-import subprocess, sys, os, base64, tempfile, ctypes, math
+import subprocess, sys, os, base64, tempfile, ctypes, math, datetime
+
+# ── Snooze mode: --snooze flag → Cancel reschedules instead of dismissing ─────
+SNOOZE_MODE = "--snooze" in sys.argv
 
 # ── Font name (loaded after root creation) ────────────────────────────────────
 PF = "Pixelify Sans"
@@ -37,6 +40,8 @@ PANEL   = "#10102a"
 RED     = "#e94560"
 RED2    = "#ff6680"
 RED_DIM = "#6a1530"
+AMBER   = "#ffaa00"
+AMBER2  = "#ffcc44"
 CYAN    = "#00e5ff"
 WHITE   = "#ffffff"
 DIM     = "#2d2d55"
@@ -59,6 +64,19 @@ def shutdown():
         tkinter.messagebox.showerror("Error", f"Could not run shutdown:\n{e}")
 
 def cancel():
+    if SNOOZE_MODE:
+        # Re-schedule self in 5 minutes — user cannot fully escape
+        t = datetime.datetime.now() + datetime.timedelta(minutes=5)
+        exe = sys.executable  # full path to TimesUp.exe when frozen
+        subprocess.Popen([
+            r"C:\Windows\System32\schtasks.exe",
+            "/create", "/tn", "TimesUp_Snooze",
+            "/tr", f'"{exe}" --snooze',
+            "/sc", "once",
+            "/st", t.strftime("%H:%M"),
+            "/sd", t.strftime("%m/%d/%Y"),
+            "/f"
+        ])
     root.destroy(); sys.exit(0)
 
 # ── Root ───────────────────────────────────────────────────────────────────────
@@ -186,11 +204,18 @@ def make_btn(parent, label, cmd, face, hover):
 btn_row = tk.Frame(content, bg=PANEL)
 btn_row.pack(pady=(0, 28))
 
-make_btn(btn_row, "SHUT DOWN", shutdown, RED,  RED2).pack(side="left", padx=22)
-make_btn(btn_row, "CANCEL",    cancel,   DIM,  DIM2).pack(side="left", padx=22)
+make_btn(btn_row, "SHUT DOWN",
+         shutdown, RED,   RED2).pack(side="left", padx=22)
+make_btn(btn_row,
+         "SNOOZE (5 MIN)" if SNOOZE_MODE else "CANCEL",
+         cancel,
+         AMBER if SNOOZE_MODE else DIM,
+         AMBER2 if SNOOZE_MODE else DIM2).pack(side="left", padx=22)
 
 # ── Warning flash label ────────────────────────────────────────────────────────
-warn_var = tk.StringVar(value="!! SHUTDOWN IN 30 SECONDS !!")
+warn_var = tk.StringVar(
+    value="!! SNOOZE = 5 MIN DELAY ONLY — NO ESCAPE !!" if SNOOZE_MODE
+    else  "!! SHUTDOWN IN 30 SECONDS !!")
 warn_lbl = tk.Label(content, textvariable=warn_var,
                     font=(PF, 8), bg=PANEL, fg=RED)
 warn_lbl.pack()
@@ -212,7 +237,11 @@ def animate():
     draw_clock(_angle[0])
 
     _cursor[0] = not _cursor[0]
-    sub_var.set(f">SESSION ENDED. SHUTDOWN?{'_' if _cursor[0] else ' '}")
+    _c = '_' if _cursor[0] else ' '
+    if SNOOZE_MODE:
+        sub_var.set(f">SNOOZE MODE — SHUTDOWN OR DELAY 5 MIN{_c}")
+    else:
+        sub_var.set(f">SESSION ENDED. SHUTDOWN?{_c}")
 
     _bphase[0] = (_bphase[0] + 1) % len(PULSE)
     draw_border(PULSE[_bphase[0]])
