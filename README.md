@@ -55,6 +55,7 @@ schtasks /create /tn "TimesUp Alert" /tr "\"%LOCALAPPDATA%\TimesUp\TimesUp.exe\"
 | **4** Remove alert | Delete a scheduled task by name |
 | **5** Build EXE only | Compile without scheduling |
 | **7** Forever Snooze setup | Quick-create a snooze-mode alert (see below) |
+| **8** On Top Mode setup | Quick-create a fullscreen lock alert (see below) |
 
 ---
 
@@ -76,6 +77,31 @@ schtasks /create /tn "TimesUp Snooze" /tr "\"%LOCALAPPDATA%\TimesUp\TimesUp.exe\
 ```
 
 The `--snooze` flag is what activates the mode.
+
+---
+
+## On Top Mode
+
+Enable this to make the alert **impossible to task-switch away from**.
+
+- The window expands to cover the **entire screen** (including taskbar)
+- A low-level keyboard hook blocks: **Win key**, **Alt+Tab**, **Alt+F4**, **Alt+Esc**, **Ctrl+Esc**, **Ctrl+Shift+Esc**
+- The user can only interact with the two buttons (or Escape = Cancel/Snooze)
+- Ctrl+Alt+Del cannot be blocked (Windows kernel-level security key)
+
+**To enable:** choose option **[8]** in the setup wizard, or answer **Y** to the On Top Mode prompt when creating any alert via options 1, 2, or 7.
+
+**To enable manually:**
+
+```bat
+schtasks /create /tn "TimesUp OnTop" /tr "\"%LOCALAPPDATA%\TimesUp\TimesUp.exe\" --ontop" /sc daily /st 22:00 /f
+```
+
+**Combined (nuclear option) — fullscreen + no dismiss:**
+
+```bat
+schtasks /create /tn "TimesUp Nuclear" /tr "\"%LOCALAPPDATA%\TimesUp\TimesUp.exe\" --snooze --ontop" /sc daily /st 22:00 /f
+```
 
 ---
 

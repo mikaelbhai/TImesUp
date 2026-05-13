@@ -37,10 +37,11 @@ echo  %WHT%[2]%RST% Add / update a scheduled alert only
 echo  %WHT%[3]%RST% List existing alerts
 echo  %WHT%[4]%RST% Remove an alert
 echo  %WHT%[5]%RST% Build EXE only
-echo  %RED%[7]%RST% Set up Forever Snooze alert %DIM%(user cannot dismiss — 5-min re-alert)%RST%
+echo  %RED%[7]%RST% Forever Snooze alert    %DIM%(cannot dismiss — re-alerts every 5 min)%RST%
+echo  %YLW%[8]%RST% On Top Mode alert       %DIM%(fullscreen lock — blocks all task-switching)%RST%
 echo  %WHT%[6]%RST% Exit
 echo.
-set /p "CHOICE=  Choose an option [1-7]: "
+set /p "CHOICE=  Choose an option [1-8]: "
 
 if "%CHOICE%"=="1" goto FULL_INSTALL
 if "%CHOICE%"=="2" goto ADD_TASK_ONLY
@@ -48,6 +49,7 @@ if "%CHOICE%"=="3" goto LIST_TASKS
 if "%CHOICE%"=="4" goto REMOVE_TASK
 if "%CHOICE%"=="5" goto BUILD_ONLY
 if "%CHOICE%"=="7" goto SNOOZE_SETUP
+if "%CHOICE%"=="8" goto ONTOP_SETUP
 if "%CHOICE%"=="6" goto END
 echo %RED%  Invalid choice.%RST%
 pause & goto :eof
@@ -125,14 +127,12 @@ pause
 goto :eof
 
 :: ═══════════════════════════════════════════════════════════════════════════
-:: ═══════════════════════════════════════════════════════════════════════════
 :SNOOZE_SETUP
 echo.
 echo %RED%  !! Forever Snooze Mode !!%RST%
 echo %DIM%  ────────────────────────────────────────────────────────%RST%
-echo  When the alert fires, the user sees %RED%SHUT DOWN%RST% and %YLW%SNOOZE (5 MIN)%RST%.
-echo  Cancelling is %RED%NOT possible%RST% — snooze re-schedules the alert 5 min later.
-echo  This loops until the user clicks SHUT DOWN.
+echo  Alert shows %RED%SHUT DOWN%RST% and %YLW%SNOOZE (5 MIN)%RST% — no dismiss button.
+echo  Each snooze re-schedules the alert 5 minutes later, indefinitely.
 echo.
 if not exist "%INSTALL_EXE%" (
     echo %YLW%  TimesUp.exe not installed. Building and installing now...%RST%
@@ -144,6 +144,31 @@ if not exist "%INSTALL_EXE%" (
     if errorlevel 1 goto END
 )
 set "SNOOZE_ARG= --snooze"
+set "ONTOP_ARG="
+call :COLLECT_TIME_NOPROMPT
+call :CREATE_TASK
+goto DONE
+
+:: ═══════════════════════════════════════════════════════════════════════════
+:ONTOP_SETUP
+echo.
+echo %YLW%  !! On Top Mode !!%RST%
+echo %DIM%  ────────────────────────────────────────────────────────%RST%
+echo  Alert goes %YLW%fullscreen%RST% and blocks Win key, Alt+Tab, Alt+F4,
+echo  Ctrl+Esc — user %YLW%cannot task-switch away%RST% until they act.
+echo  %DIM%(Ctrl+Alt+Del is a Windows security key and cannot be blocked.)%RST%
+echo.
+if not exist "%INSTALL_EXE%" (
+    echo %YLW%  TimesUp.exe not installed. Building and installing now...%RST%
+    if not exist "%EXE_SRC%" (
+        call :BUILD_EXE
+        if errorlevel 1 goto END
+    )
+    call :DO_INSTALL
+    if errorlevel 1 goto END
+)
+set "SNOOZE_ARG="
+set "ONTOP_ARG= --ontop"
 call :COLLECT_TIME_NOPROMPT
 call :CREATE_TASK
 goto DONE
@@ -196,6 +221,7 @@ exit /b 0
 
 :COLLECT_TIME
 set "SNOOZE_ARG="
+set "ONTOP_ARG="
 echo.
 echo %WHT%  Configure your alert%RST%
 echo %DIM%  ─────────────────────%RST%
@@ -228,16 +254,22 @@ if /i "%SCHED_TYPE%"=="W" (
 )
 
 echo.
-echo  %RED%Forever Snooze Mode:%RST% user sees SNOOZE instead of Cancel —
-echo  re-alerts every 5 min until they click SHUT DOWN.
+echo  %RED%Forever Snooze Mode:%RST% SNOOZE button replaces Cancel — re-alerts every 5 min.
 set /p "SNOOZE_CHOICE=  Enable Forever Snooze? [Y/N, default N]: "
 if /i "!SNOOZE_CHOICE!"=="Y" (
     set "SNOOZE_ARG= --snooze"
-    echo %YLW%  Snooze mode ON — user cannot dismiss the alert.%RST%
+    echo %YLW%  Snooze mode ON.%RST%
+)
+echo.
+echo  %YLW%On Top Mode:%RST% fullscreen lock — blocks Win key, Alt+Tab, Alt+F4, Ctrl+Esc.
+set /p "ONTOP_CHOICE=  Enable On Top Mode? [Y/N, default N]: "
+if /i "!ONTOP_CHOICE!"=="Y" (
+    set "ONTOP_ARG= --ontop"
+    echo %YLW%  On Top mode ON — user cannot task-switch away.%RST%
 )
 exit /b 0
 
-:: Same as COLLECT_TIME but skips the snooze prompt (snooze already set by caller)
+:: COLLECT_TIME_NOPROMPT: used by dedicated mode setups (snooze/ontop pre-set by caller)
 :COLLECT_TIME_NOPROMPT
 echo.
 echo %WHT%  Configure your Forever Snooze alert%RST%
@@ -267,6 +299,19 @@ if /i "%SCHED_TYPE%"=="W" (
     echo  Day of week: MON TUE WED THU FRI SAT SUN
     set /p "WEEK_DAY=  Day: "
 )
+:: Offer the complementary mode (caller pre-set one; ask about the other)
+if "!SNOOZE_ARG!"=="" (
+    echo.
+    echo  Also enable %RED%Forever Snooze%RST%? [Y/N, default N]
+    set /p "_EXTRA_S=  : "
+    if /i "!_EXTRA_S!"=="Y" set "SNOOZE_ARG= --snooze"
+)
+if "!ONTOP_ARG!"=="" (
+    echo.
+    echo  Also enable %YLW%On Top Mode%RST% ^(fullscreen lock^)? [Y/N, default N]
+    set /p "_EXTRA_O=  : "
+    if /i "!_EXTRA_O!"=="Y" set "ONTOP_ARG= --ontop"
+)
 exit /b 0
 
 :CREATE_TASK
@@ -274,7 +319,7 @@ set "SC_PARAM=/sc daily"
 if /i "%SCHED_TYPE%"=="W" set "SC_PARAM=/sc weekly /d %WEEK_DAY%"
 if /i "%SCHED_TYPE%"=="O" set "SC_PARAM=/sc once"
 
-schtasks /create /tn "%TASK_LABEL%" /tr "\"%INSTALL_EXE%\"%SNOOZE_ARG%" %SC_PARAM% /st %ALERT_TIME% /f >nul 2>&1
+schtasks /create /tn "%TASK_LABEL%" /tr "\"%INSTALL_EXE%\"%SNOOZE_ARG%%ONTOP_ARG%" %SC_PARAM% /st %ALERT_TIME% /f >nul 2>&1
 if errorlevel 1 (
     echo %RED%  [ERROR] Could not create scheduled task. Try running as Administrator.%RST%
     pause
@@ -287,7 +332,10 @@ echo  %WHT%Task name:%RST%   %TASK_LABEL%
 echo  %WHT%Runs:%RST%        %SCHED_TYPE% at %ALERT_TIME%
 echo  %WHT%Launches:%RST%    %INSTALL_EXE%
 if not "!SNOOZE_ARG!"=="" (
-    echo  %RED%Mode:%RST%        Forever Snooze — re-alerts every 5 min until shutdown
+    echo  %RED%Snooze:%RST%      Forever Snooze — re-alerts every 5 min until shutdown
+)
+if not "!ONTOP_ARG!"=="" (
+    echo  %YLW%On Top:%RST%      Fullscreen lock — blocks Win key / Alt+Tab / Alt+F4
 )
 echo.
 echo %DIM%  Manage in: Task Scheduler → Task Scheduler Library%RST%
