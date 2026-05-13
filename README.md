@@ -8,16 +8,17 @@ A retro pixel-art shutdown alert for Windows. When the timer fires, a full-scree
 
 ## Quick Start
 
-### Option A — Run the setup wizard (recommended)
+### Option A — Run the setup wizard, then launch the Tray Manager (recommended)
 
 ```
 setup.bat
 ```
 
-The wizard will:
-1. Build `TimesUp.exe` from source using PyInstaller
-2. Install it to `%LOCALAPPDATA%\TimesUp\`
-3. Add it to **Windows Task Scheduler** at whatever time you choose
+Choose **[1] Full install** to build and install everything, then choose **[0] Launch Tray Manager** to start the system tray icon. Right-click the clock in your system tray to add alerts, manage options, and view stats — no command line needed.
+
+### Option B — Run the setup wizard for Task Scheduler only
+
+The wizard (options 1–9) can also add alerts directly to Windows Task Scheduler without the tray.
 
 ### Option B — Manual steps
 
@@ -57,6 +58,38 @@ schtasks /create /tn "TimesUp Alert" /tr "\"%LOCALAPPDATA%\TimesUp\TimesUp.exe\"
 | **7** Forever Snooze setup | Quick-create a snooze-mode alert (see below) |
 | **8** On Top Mode setup | Quick-create a fullscreen lock alert (see below) |
 | **9** View stats & log | Launch the stats viewer |
+
+---
+
+## Tray Manager
+
+`TimesUpTray.exe` runs as a system tray icon (pixel art clock). Right-click it for the full management UI — no command line needed after initial install.
+
+**Tray menu:**
+
+| Item | Action |
+|------|--------|
+| Add Alert... | Opens a styled dialog to create a new alert |
+| Manage Alerts... | List, edit, and delete all alerts |
+| Scheduled Alerts | Submenu showing each alert with Edit / Delete |
+| Stats & Log | Launches the stats viewer |
+| Test Alert Now | Fires the alert immediately |
+| Start with Windows | Toggle auto-start on login (writes to registry Run key) |
+| Exit | Remove from tray |
+
+**Add Alert dialog fields:**
+
+| Field | Description |
+|-------|-------------|
+| Alert name | Identifies the task in Task Scheduler and the tray menu |
+| Time (HH:MM) | 24h time the alert fires |
+| Schedule | Daily / Weekly (pick a day) / Once |
+| Forever Snooze | Re-alerts every 5 min until user shuts down |
+| On Top Mode | Fullscreen lock + keyboard hook |
+
+Alerts created via the tray are stored in `%LOCALAPPDATA%\TimesUp\alerts.json` and registered in Task Scheduler simultaneously. Alerts created by `setup.bat` are in Task Scheduler only (not shown in the tray's Manage dialog, but still fire normally).
+
+**Dependencies (auto-installed by `build.bat` and `setup.bat`):** `pystray`, `Pillow`
 
 ---
 
@@ -168,8 +201,9 @@ build.bat            Build both EXEs
 setup.bat            Full setup wizard (build + Task Scheduler)
 TimesUp.spec         PyInstaller spec for alert EXE
 TimesUpStats.spec    PyInstaller spec for stats EXE
-dist/TimesUp.exe     Alert executable (after build)
+dist/TimesUp.exe       Alert executable (after build)
 dist/TimesUpStats.exe  Stats viewer executable (after build)
+dist/TimesUpTray.exe   Tray manager executable (after build)
 ```
 
 ---

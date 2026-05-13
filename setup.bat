@@ -15,9 +15,11 @@ set "RST=%ESC%[0m"
 set "SCRIPT_DIR=%~dp0"
 set "EXE_SRC=%SCRIPT_DIR%dist\TimesUp.exe"
 set "STATS_SRC=%SCRIPT_DIR%dist\TimesUpStats.exe"
+set "TRAY_SRC=%SCRIPT_DIR%dist\TimesUpTray.exe"
 set "INSTALL_DIR=%LOCALAPPDATA%\TimesUp"
 set "INSTALL_EXE=%INSTALL_DIR%\TimesUp.exe"
 set "STATS_EXE=%INSTALL_DIR%\TimesUpStats.exe"
+set "TRAY_EXE=%INSTALL_DIR%\TimesUpTray.exe"
 set "TASK_NAME=TimesUp Alert"
 
 cls
@@ -34,18 +36,20 @@ echo %DIM%  ──────────────────────�
 echo.
 
 :: ─── MENU ───────────────────────────────────────────────────────────────────
-echo  %WHT%[1]%RST% Full install (build EXE + add scheduled alert)
-echo  %WHT%[2]%RST% Add / update a scheduled alert only
+echo  %GRN%[0]%RST% Launch Tray Manager      %DIM%(recommended — manage alerts from system tray)%RST%
+echo  %WHT%[1]%RST% Full install             %DIM%(build all EXEs + schedule first alert)%RST%
+echo  %WHT%[2]%RST% Add / update a scheduled alert
 echo  %WHT%[3]%RST% List existing alerts
 echo  %WHT%[4]%RST% Remove an alert
-echo  %WHT%[5]%RST% Build EXE only
+echo  %WHT%[5]%RST% Build EXEs only
 echo  %RED%[7]%RST% Forever Snooze alert    %DIM%(cannot dismiss — re-alerts every 5 min)%RST%
 echo  %YLW%[8]%RST% On Top Mode alert       %DIM%(fullscreen lock — blocks all task-switching)%RST%
 echo  %CYAN%[9]%RST% View stats and log
 echo  %WHT%[6]%RST% Exit
 echo.
-set /p "CHOICE=  Choose an option [1-9]: "
+set /p "CHOICE=  Choose an option [0-9]: "
 
+if "%CHOICE%"=="0" goto LAUNCH_TRAY
 if "%CHOICE%"=="1" goto FULL_INSTALL
 if "%CHOICE%"=="2" goto ADD_TASK_ONLY
 if "%CHOICE%"=="3" goto LIST_TASKS
@@ -125,6 +129,27 @@ if errorlevel 1 (
     echo %RED%  Task "%TASK_DEL%" not found or could not be deleted.%RST%
 ) else (
     echo %GRN%  Task "%TASK_DEL%" removed.%RST%
+)
+echo.
+pause
+goto :eof
+
+:: ═══════════════════════════════════════════════════════════════════════════
+:LAUNCH_TRAY
+echo.
+if exist "%TRAY_EXE%" (
+    echo %GRN%  Starting Tray Manager...%RST%
+    start "" "%TRAY_EXE%"
+    echo  Look for the clock icon in the system tray ^(bottom-right^).
+) else if exist "%TRAY_SRC%" (
+    echo %YLW%  Installing tray first...%RST%
+    if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+    copy /y "%TRAY_SRC%" "%TRAY_EXE%" >nul
+    start "" "%TRAY_EXE%"
+    echo  Look for the clock icon in the system tray ^(bottom-right^).
+) else (
+    echo %RED%  TimesUpTray.exe not found.%RST%
+    echo  Run option 1 or 5 to build it first.
 )
 echo.
 pause
@@ -220,20 +245,25 @@ if errorlevel 1 (
 )
 
 echo.
-echo  Building TimesUp.exe + TimesUpStats.exe (~60 seconds)...
+echo  Installing dependencies (pystray, Pillow, PyInstaller)...
+pip install pyinstaller pystray Pillow --quiet --disable-pip-version-check
+
+echo  Building EXEs (~90 seconds)...
 cd /d "%SCRIPT_DIR%"
 pyinstaller TimesUp.spec --noconfirm >nul 2>&1
 if not exist "%EXE_SRC%" (
-    echo %RED%  [ERROR] TimesUp build failed. Run build.bat manually for full output.%RST%
+    echo %RED%  [ERROR] TimesUp build failed. Run build.bat for full output.%RST%
     pause
     exit /b 1
 )
+echo %GRN%  OK: %EXE_SRC%%RST%
 pyinstaller TimesUpStats.spec --noconfirm >nul 2>&1
-if not exist "%STATS_SRC%" (
-    echo %YLW%  [WARN] TimesUpStats build failed — stats viewer unavailable.%RST%
+if exist "%STATS_SRC%" echo %GRN%  OK: %STATS_SRC%%RST%
+pyinstaller TimesUpTray.spec --noconfirm >nul 2>&1
+if exist "%TRAY_SRC%" (
+    echo %GRN%  OK: %TRAY_SRC%%RST%
 ) else (
-    echo %GRN%  Build successful: %EXE_SRC%%RST%
-    echo %GRN%  Build successful: %STATS_SRC%%RST%
+    echo %YLW%  [WARN] Tray build failed — check pystray/Pillow are installed.%RST%
 )
 exit /b 0
 
@@ -248,6 +278,10 @@ echo %GRN%  Installed: %INSTALL_EXE%%RST%
 if exist "%STATS_SRC%" (
     copy /y "%STATS_SRC%" "%STATS_EXE%" >nul
     echo %GRN%  Installed: %STATS_EXE%%RST%
+)
+if exist "%TRAY_SRC%" (
+    copy /y "%TRAY_SRC%" "%TRAY_EXE%" >nul
+    echo %GRN%  Installed: %TRAY_EXE%%RST%
 )
 exit /b 0
 
@@ -380,13 +414,12 @@ echo %GRN%  ══════════════════════�
 echo %GRN%   All done! Time's Up! is ready.%RST%
 echo %GRN%  ══════════════════════════════════════════%RST%
 echo.
-echo  Test alert now:
-echo  %CYAN%  "%INSTALL_EXE%"%RST%
+echo  %GRN%Start the Tray Manager%RST% for the full experience:
+echo  %CYAN%  "%TRAY_EXE%"%RST%
+echo  %DIM%  (clock icon in system tray — right-click to manage alerts)%RST%
 echo.
-echo  View stats ^& log:
-echo  %CYAN%  "%STATS_EXE%"%RST%
-echo.
-echo  Or choose option %CYAN%[9]%RST% from the menu.
+echo  Or:  Test alert   → %CYAN%"%INSTALL_EXE%"%RST%
+echo       View stats   → option %CYAN%[9]%RST% / "%STATS_EXE%"
 echo.
 
 :END

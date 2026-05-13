@@ -1,44 +1,50 @@
 @echo off
 echo ============================================
-echo   Building Time's Up! EXEs
+echo   Building Time's Up! — all EXEs
 echo ============================================
 echo.
 
-:: Check pip
 pip --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] pip not found. Make sure Python is installed and in your PATH.
-    pause
-    exit /b 1
+    echo [ERROR] pip not found. Install Python 3.9+ and add it to PATH.
+    pause & exit /b 1
 )
 
-:: Install PyInstaller
-echo [1/4] Installing PyInstaller...
-pip install pyinstaller --quiet
+echo [1/5] Installing dependencies...
+pip install pyinstaller pystray Pillow --quiet --disable-pip-version-check
+if errorlevel 1 (
+    echo [ERROR] pip install failed.
+    pause & exit /b 1
+)
 
-:: Build main alert EXE
-echo [2/4] Compiling TimesUp.exe...
+echo [2/5] Compiling TimesUp.exe  (alert)...
 pyinstaller TimesUp.spec --noconfirm >nul 2>&1
 if not exist "dist\TimesUp.exe" (
-    echo [ERROR] TimesUp build failed. Run without >nul to see output.
-    pause
-    exit /b 1
+    echo [ERROR] TimesUp build failed — run without ^>nul to see output.
+    pause & exit /b 1
 )
 echo        OK: dist\TimesUp.exe
 
-:: Build stats viewer EXE
-echo [3/4] Compiling TimesUpStats.exe...
+echo [3/5] Compiling TimesUpStats.exe  (stats viewer)...
 pyinstaller TimesUpStats.spec --noconfirm >nul 2>&1
 if not exist "dist\TimesUpStats.exe" (
-    echo [ERROR] TimesUpStats build failed. Run without >nul to see output.
-    pause
-    exit /b 1
+    echo [WARN] TimesUpStats build failed — stats viewer unavailable.
+) else (
+    echo        OK: dist\TimesUpStats.exe
 )
-echo        OK: dist\TimesUpStats.exe
+
+echo [4/5] Compiling TimesUpTray.exe  (system tray)...
+pyinstaller TimesUpTray.spec --noconfirm >nul 2>&1
+if not exist "dist\TimesUpTray.exe" (
+    echo [WARN] TimesUpTray build failed — tray unavailable.
+) else (
+    echo        OK: dist\TimesUpTray.exe
+)
 
 echo.
-echo [4/4] Done!
+echo [5/5] Done!
 echo   Alert:  dist\TimesUp.exe
 echo   Stats:  dist\TimesUpStats.exe
+echo   Tray:   dist\TimesUpTray.exe
 echo.
 pause
