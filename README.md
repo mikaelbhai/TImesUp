@@ -56,6 +56,7 @@ schtasks /create /tn "TimesUp Alert" /tr "\"%LOCALAPPDATA%\TimesUp\TimesUp.exe\"
 | **5** Build EXE only | Compile without scheduling |
 | **7** Forever Snooze setup | Quick-create a snooze-mode alert (see below) |
 | **8** On Top Mode setup | Quick-create a fullscreen lock alert (see below) |
+| **9** View stats & log | Launch the stats viewer |
 
 ---
 
@@ -127,15 +128,48 @@ PyInstaller is installed automatically by `setup.bat` / `build.bat`.
 
 ---
 
+## Stats & Log
+
+Every time an alert fires and the user takes action, a record is written to:
+
+```
+%LOCALAPPDATA%\TimesUp\log.jsonl
+```
+
+Each line is a JSON object:
+
+```json
+{"ts": "2026-05-13T22:00:00", "action": "shutdown", "mode": ["snooze","ontop"], "elapsed": 12.3}
+```
+
+| Field | Values |
+|-------|--------|
+| `action` | `shutdown` / `snooze` / `cancel` |
+| `mode` | list of active flags (`snooze`, `ontop`) |
+| `elapsed` | seconds between alert appearing and action |
+
+**To view stats:** run `setup.bat → [9]` or launch `TimesUpStats.exe` directly.
+
+The stats window shows:
+- Summary boxes: total, shutdowns, snoozes, cancels, shutdown %, avg response time
+- 21-day stacked bar chart (red = shutdown, amber = snooze, grey = cancel)
+- Scrollable recent log with timestamps, actions, and modes
+- **Clear Log** button (irreversible)
+
+---
+
 ## Files
 
 ```
-timesup.py          Main application source
-font_data.py        Pixelify Sans font embedded as base64
-build.bat           Build-only script (no scheduling)
-setup.bat           Full setup wizard (build + Task Scheduler)
-TimesUp.spec        PyInstaller spec
-dist/TimesUp.exe    Compiled executable (after build)
+timesup.py           Main alert source
+stats.py             Stats & log viewer source
+font_data.py         Pixelify Sans font embedded as base64
+build.bat            Build both EXEs
+setup.bat            Full setup wizard (build + Task Scheduler)
+TimesUp.spec         PyInstaller spec for alert EXE
+TimesUpStats.spec    PyInstaller spec for stats EXE
+dist/TimesUp.exe     Alert executable (after build)
+dist/TimesUpStats.exe  Stats viewer executable (after build)
 ```
 
 ---

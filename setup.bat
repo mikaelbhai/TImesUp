@@ -14,8 +14,10 @@ set "RST=%ESC%[0m"
 
 set "SCRIPT_DIR=%~dp0"
 set "EXE_SRC=%SCRIPT_DIR%dist\TimesUp.exe"
+set "STATS_SRC=%SCRIPT_DIR%dist\TimesUpStats.exe"
 set "INSTALL_DIR=%LOCALAPPDATA%\TimesUp"
 set "INSTALL_EXE=%INSTALL_DIR%\TimesUp.exe"
+set "STATS_EXE=%INSTALL_DIR%\TimesUpStats.exe"
 set "TASK_NAME=TimesUp Alert"
 
 cls
@@ -39,9 +41,10 @@ echo  %WHT%[4]%RST% Remove an alert
 echo  %WHT%[5]%RST% Build EXE only
 echo  %RED%[7]%RST% Forever Snooze alert    %DIM%(cannot dismiss — re-alerts every 5 min)%RST%
 echo  %YLW%[8]%RST% On Top Mode alert       %DIM%(fullscreen lock — blocks all task-switching)%RST%
+echo  %CYAN%[9]%RST% View stats and log
 echo  %WHT%[6]%RST% Exit
 echo.
-set /p "CHOICE=  Choose an option [1-8]: "
+set /p "CHOICE=  Choose an option [1-9]: "
 
 if "%CHOICE%"=="1" goto FULL_INSTALL
 if "%CHOICE%"=="2" goto ADD_TASK_ONLY
@@ -50,6 +53,7 @@ if "%CHOICE%"=="4" goto REMOVE_TASK
 if "%CHOICE%"=="5" goto BUILD_ONLY
 if "%CHOICE%"=="7" goto SNOOZE_SETUP
 if "%CHOICE%"=="8" goto ONTOP_SETUP
+if "%CHOICE%"=="9" goto VIEW_STATS
 if "%CHOICE%"=="6" goto END
 echo %RED%  Invalid choice.%RST%
 pause & goto :eof
@@ -127,6 +131,24 @@ pause
 goto :eof
 
 :: ═══════════════════════════════════════════════════════════════════════════
+:VIEW_STATS
+echo.
+if exist "%STATS_EXE%" (
+    echo %CYAN%  Launching TimesUpStats...%RST%
+    start "" "%STATS_EXE%"
+) else if exist "%STATS_SRC%" (
+    echo %YLW%  Installing stats viewer first...%RST%
+    copy /y "%STATS_SRC%" "%STATS_EXE%" >nul
+    start "" "%STATS_EXE%"
+) else (
+    echo %RED%  TimesUpStats.exe not found.%RST%
+    echo  Run option 1 or 5 to build it first.
+    echo.
+    pause
+)
+goto :eof
+
+:: ═══════════════════════════════════════════════════════════════════════════
 :SNOOZE_SETUP
 echo.
 echo %RED%  !! Forever Snooze Mode !!%RST%
@@ -198,15 +220,21 @@ if errorlevel 1 (
 )
 
 echo.
-echo  Building TimesUp.exe (this takes ~30 seconds)...
+echo  Building TimesUp.exe + TimesUpStats.exe (~60 seconds)...
 cd /d "%SCRIPT_DIR%"
-pyinstaller --onefile --windowed --name "TimesUp" timesup.py --noconfirm >nul 2>&1
+pyinstaller TimesUp.spec --noconfirm >nul 2>&1
 if not exist "%EXE_SRC%" (
-    echo %RED%  [ERROR] Build failed. Run build.bat manually for full output.%RST%
+    echo %RED%  [ERROR] TimesUp build failed. Run build.bat manually for full output.%RST%
     pause
     exit /b 1
 )
-echo %GRN%  Build successful: %EXE_SRC%%RST%
+pyinstaller TimesUpStats.spec --noconfirm >nul 2>&1
+if not exist "%STATS_SRC%" (
+    echo %YLW%  [WARN] TimesUpStats build failed — stats viewer unavailable.%RST%
+) else (
+    echo %GRN%  Build successful: %EXE_SRC%%RST%
+    echo %GRN%  Build successful: %STATS_SRC%%RST%
+)
 exit /b 0
 
 :DO_INSTALL
@@ -216,7 +244,11 @@ if errorlevel 1 (
     echo %RED%  [ERROR] Could not copy EXE to %INSTALL_DIR%%RST%
     exit /b 1
 )
-echo %GRN%  Installed to: %INSTALL_EXE%%RST%
+echo %GRN%  Installed: %INSTALL_EXE%%RST%
+if exist "%STATS_SRC%" (
+    copy /y "%STATS_SRC%" "%STATS_EXE%" >nul
+    echo %GRN%  Installed: %STATS_EXE%%RST%
+)
 exit /b 0
 
 :COLLECT_TIME
@@ -348,8 +380,13 @@ echo %GRN%  ══════════════════════�
 echo %GRN%   All done! Time's Up! is ready.%RST%
 echo %GRN%  ══════════════════════════════════════════%RST%
 echo.
-echo  Test it now by running:
+echo  Test alert now:
 echo  %CYAN%  "%INSTALL_EXE%"%RST%
+echo.
+echo  View stats ^& log:
+echo  %CYAN%  "%STATS_EXE%"%RST%
+echo.
+echo  Or choose option %CYAN%[9]%RST% from the menu.
 echo.
 
 :END

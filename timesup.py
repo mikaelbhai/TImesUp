@@ -1,9 +1,29 @@
 import tkinter as tk
-import subprocess, sys, os, base64, tempfile, ctypes, math, datetime, threading
+import subprocess, sys, os, base64, tempfile, ctypes, math, datetime, threading, json
 
 # ── Mode flags ────────────────────────────────────────────────────────────────
 SNOOZE_MODE = "--snooze" in sys.argv
 ON_TOP_MODE = "--ontop"  in sys.argv
+
+# ── Activity log ───────────────────────────────────────────────────────────────
+LOG_FILE = os.path.join(
+    os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
+    "TimesUp", "log.jsonl")
+_t_start = datetime.datetime.now()
+
+def _log(action):
+    try:
+        entry = {
+            "ts":      _t_start.isoformat(timespec="seconds"),
+            "action":  action,
+            "mode":    [m for m, f in [("snooze", SNOOZE_MODE), ("ontop", ON_TOP_MODE)] if f],
+            "elapsed": round((datetime.datetime.now() - _t_start).total_seconds(), 1),
+        }
+        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception:
+        pass
 
 # ── Font name (loaded after root creation) ────────────────────────────────────
 PF = "Pixelify Sans"
@@ -105,6 +125,7 @@ def _stop_hook():
 
 # ── Actions ────────────────────────────────────────────────────────────────────
 def shutdown():
+    _log("shutdown")
     _stop_hook()
     try:
         subprocess.Popen([r"C:\Windows\System32\shutdown.exe",
@@ -116,6 +137,7 @@ def shutdown():
         tkinter.messagebox.showerror("Error", f"Could not run shutdown:\n{e}")
 
 def cancel():
+    _log("snooze" if SNOOZE_MODE else "cancel")
     _stop_hook()
     if SNOOZE_MODE:
         # Re-schedule self in 5 minutes, preserving all active flags
