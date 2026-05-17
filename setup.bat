@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 setlocal EnableDelayedExpansion
 title Time's Up! — Setup
 
@@ -22,31 +23,29 @@ set "STATS_EXE=%INSTALL_DIR%\TimesUpStats.exe"
 set "TRAY_EXE=%INSTALL_DIR%\TimesUpTray.exe"
 set "TASK_NAME=TimesUp Alert"
 
+:: ─── MENU (loop) ─────────────────────────────────────────────────────────────
+:MENU
 cls
 echo.
-echo %CYAN%  ████████╗██╗███╗   ███╗███████╗███████╗    ██╗   ██╗██████╗ %RST%
-echo %CYAN%     ██╔══╝██║████╗ ████║██╔════╝██╔════╝    ██║   ██║██╔══██╗%RST%
-echo %CYAN%     ██║   ██║██╔████╔██║█████╗  ███████╗    ██║   ██║██████╔╝%RST%
-echo %CYAN%     ██║   ██║██║╚██╔╝██║██╔══╝  ╚════██║    ██║   ██║██╔═══╝ %RST%
-echo %CYAN%     ██║   ██║██║ ╚═╝ ██║███████╗███████║    ╚██████╔╝██║     %RST%
-echo %CYAN%     ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝     ╚═════╝ ╚═╝     %RST%
+echo %CYAN%  +-+-+-+-+-+-+-+-+-+-+%RST%
+echo %CYAN%  ^|T^|i^|m^|e^|'s^| ^|U^|p^|!^|%RST%
+echo %CYAN%  +-+-+-+-+-+-+-+-+-+-+%RST%
 echo.
-echo %WHT%  Setup Wizard — Windows Task Scheduler Edition%RST%
-echo %DIM%  ─────────────────────────────────────────────%RST%
+echo %WHT%  Setup Wizard  --  Windows Task Scheduler Edition%RST%
+echo %DIM%  -------------------------------------------------%RST%
 echo.
-
-:: ─── MENU ───────────────────────────────────────────────────────────────────
-echo  %GRN%[0]%RST% Launch Tray Manager      %DIM%(recommended — manage alerts from system tray)%RST%
+echo  %GRN%[0]%RST% Launch Tray Manager      %DIM%(recommended -- manage alerts from system tray)%RST%
 echo  %WHT%[1]%RST% Full install             %DIM%(build all EXEs + schedule first alert)%RST%
 echo  %WHT%[2]%RST% Add / update a scheduled alert
 echo  %WHT%[3]%RST% List existing alerts
 echo  %WHT%[4]%RST% Remove an alert
 echo  %WHT%[5]%RST% Build EXEs only
-echo  %RED%[7]%RST% Forever Snooze alert    %DIM%(cannot dismiss — re-alerts every 5 min)%RST%
-echo  %YLW%[8]%RST% On Top Mode alert       %DIM%(fullscreen lock — blocks all task-switching)%RST%
+echo  %RED%[7]%RST% Forever Snooze alert    %DIM%(cannot dismiss -- re-alerts every 5 min)%RST%
+echo  %YLW%[8]%RST% On Top Mode alert       %DIM%(fullscreen lock -- blocks all task-switching)%RST%
 echo  %CYAN%[9]%RST% View stats and log
 echo  %WHT%[6]%RST% Exit
 echo.
+set "CHOICE="
 set /p "CHOICE=  Choose an option [0-9]: "
 
 if "%CHOICE%"=="0" goto LAUNCH_TRAY
@@ -59,23 +58,24 @@ if "%CHOICE%"=="7" goto SNOOZE_SETUP
 if "%CHOICE%"=="8" goto ONTOP_SETUP
 if "%CHOICE%"=="9" goto VIEW_STATS
 if "%CHOICE%"=="6" goto END
-echo %RED%  Invalid choice.%RST%
-pause & goto :eof
+echo %RED%  Invalid choice. Try again.%RST%
+timeout /t 1 >nul
+goto MENU
 
 :: ═══════════════════════════════════════════════════════════════════════════
 :FULL_INSTALL
 echo.
-echo %CYAN%  ── Step 1 of 3: Build the EXE ──────────────────────────%RST%
+echo %CYAN%  -- Step 1 of 3: Build the EXE --------------------------%RST%
 call :BUILD_EXE
-if errorlevel 1 goto END
+if errorlevel 1 goto MENU
 
 echo.
-echo %CYAN%  ── Step 2 of 3: Install to %INSTALL_DIR% ──%RST%
+echo %CYAN%  -- Step 2 of 3: Install to %INSTALL_DIR% --%RST%
 call :DO_INSTALL
-if errorlevel 1 goto END
+if errorlevel 1 goto MENU
 
 echo.
-echo %CYAN%  ── Step 3 of 3: Schedule the alert ─────────────────────%RST%
+echo %CYAN%  -- Step 3 of 3: Schedule the alert ---------------------%RST%
 call :COLLECT_TIME
 call :CREATE_TASK
 goto DONE
@@ -89,7 +89,7 @@ if not exist "%INSTALL_EXE%" (
         call :DO_INSTALL
     ) else (
         echo %RED%  No EXE found. Run option 1 or 5 first to build.%RST%
-        pause & goto :eof
+        pause & goto MENU
     )
 )
 call :COLLECT_TIME
@@ -99,31 +99,32 @@ goto DONE
 :: ═══════════════════════════════════════════════════════════════════════════
 :BUILD_ONLY
 call :BUILD_EXE
-if errorlevel 1 goto END
+if errorlevel 1 goto MENU
 call :DO_INSTALL
 goto DONE
 
 :: ═══════════════════════════════════════════════════════════════════════════
 :LIST_TASKS
 echo.
-echo %CYAN%  ── Scheduled Time's Up! alerts ─────────────────────────%RST%
+echo %CYAN%  -- Scheduled Time's Up! alerts --------------------------%RST%
 echo.
 schtasks /query /fo LIST /v 2>nul | findstr /i "timesup\|Time's Up\|TaskName\|Next Run\|Scheduled Type\|Start Time" | findstr /i /v "Author\|Status\|Last Run\|Last Result\|Idle\|Power\|Stop\|Delete\|Missed"
 echo.
 echo %DIM%  (Run 'schtasks /query /tn "TimesUp Alert"' for full details)%RST%
 echo.
 pause
-goto :eof
+goto MENU
 
 :: ═══════════════════════════════════════════════════════════════════════════
 :REMOVE_TASK
 echo.
-echo %CYAN%  ── Remove a scheduled alert ────────────────────────────%RST%
+echo %CYAN%  -- Remove a scheduled alert -----------------------------%RST%
 echo.
 schtasks /query /fo TABLE /nh 2>nul | findstr /i "timesup\|Time's Up"
 echo.
+set "TASK_DEL="
 set /p "TASK_DEL=  Enter exact task name to delete (or press Enter to cancel): "
-if "%TASK_DEL%"=="" goto :eof
+if "%TASK_DEL%"=="" goto MENU
 schtasks /delete /tn "%TASK_DEL%" /f >nul 2>&1
 if errorlevel 1 (
     echo %RED%  Task "%TASK_DEL%" not found or could not be deleted.%RST%
@@ -132,7 +133,7 @@ if errorlevel 1 (
 )
 echo.
 pause
-goto :eof
+goto MENU
 
 :: ═══════════════════════════════════════════════════════════════════════════
 :LAUNCH_TRAY
@@ -140,20 +141,20 @@ echo.
 if exist "%TRAY_EXE%" (
     echo %GRN%  Starting Tray Manager...%RST%
     start "" "%TRAY_EXE%"
-    echo  Look for the clock icon in the system tray ^(bottom-right^).
+    echo  Look for the clock icon in the system tray (bottom-right).
 ) else if exist "%TRAY_SRC%" (
     echo %YLW%  Installing tray first...%RST%
     if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
     copy /y "%TRAY_SRC%" "%TRAY_EXE%" >nul
     start "" "%TRAY_EXE%"
-    echo  Look for the clock icon in the system tray ^(bottom-right^).
+    echo  Look for the clock icon in the system tray (bottom-right).
 ) else (
     echo %RED%  TimesUpTray.exe not found.%RST%
     echo  Run option 1 or 5 to build it first.
 )
 echo.
-pause
-goto :eof
+timeout /t 2 >nul
+goto MENU
 
 :: ═══════════════════════════════════════════════════════════════════════════
 :VIEW_STATS
@@ -168,27 +169,27 @@ if exist "%STATS_EXE%" (
 ) else (
     echo %RED%  TimesUpStats.exe not found.%RST%
     echo  Run option 1 or 5 to build it first.
-    echo.
     pause
 )
-goto :eof
+timeout /t 1 >nul
+goto MENU
 
 :: ═══════════════════════════════════════════════════════════════════════════
 :SNOOZE_SETUP
 echo.
 echo %RED%  !! Forever Snooze Mode !!%RST%
-echo %DIM%  ────────────────────────────────────────────────────────%RST%
-echo  Alert shows %RED%SHUT DOWN%RST% and %YLW%SNOOZE (5 MIN)%RST% — no dismiss button.
+echo %DIM%  --------------------------------------------------------%RST%
+echo  Alert shows %RED%SHUT DOWN%RST% and %YLW%SNOOZE (5 MIN)%RST% -- no dismiss button.
 echo  Each snooze re-schedules the alert 5 minutes later, indefinitely.
 echo.
 if not exist "%INSTALL_EXE%" (
     echo %YLW%  TimesUp.exe not installed. Building and installing now...%RST%
     if not exist "%EXE_SRC%" (
         call :BUILD_EXE
-        if errorlevel 1 goto END
+        if errorlevel 1 goto MENU
     )
     call :DO_INSTALL
-    if errorlevel 1 goto END
+    if errorlevel 1 goto MENU
 )
 set "SNOOZE_ARG= --snooze"
 set "ONTOP_ARG="
@@ -200,19 +201,19 @@ goto DONE
 :ONTOP_SETUP
 echo.
 echo %YLW%  !! On Top Mode !!%RST%
-echo %DIM%  ────────────────────────────────────────────────────────%RST%
+echo %DIM%  --------------------------------------------------------%RST%
 echo  Alert goes %YLW%fullscreen%RST% and blocks Win key, Alt+Tab, Alt+F4,
-echo  Ctrl+Esc — user %YLW%cannot task-switch away%RST% until they act.
+echo  Ctrl+Esc -- user %YLW%cannot task-switch away%RST% until they act.
 echo  %DIM%(Ctrl+Alt+Del is a Windows security key and cannot be blocked.)%RST%
 echo.
 if not exist "%INSTALL_EXE%" (
     echo %YLW%  TimesUp.exe not installed. Building and installing now...%RST%
     if not exist "%EXE_SRC%" (
         call :BUILD_EXE
-        if errorlevel 1 goto END
+        if errorlevel 1 goto MENU
     )
     call :DO_INSTALL
-    if errorlevel 1 goto END
+    if errorlevel 1 goto MENU
 )
 set "SNOOZE_ARG="
 set "ONTOP_ARG= --ontop"
@@ -226,44 +227,45 @@ goto DONE
 :BUILD_EXE
 echo.
 echo  Checking for Python...
-python --version >nul 2>&1
+py --version >nul 2>&1
 if errorlevel 1 (
-    echo %RED%  [ERROR] Python not found. Install Python 3.9+ and add it to PATH.%RST%
-    echo  Download: https://www.python.org/downloads/
-    pause
-    exit /b 1
+    python --version >nul 2>&1
+    if errorlevel 1 (
+        echo %RED%  [ERROR] Python not found. Install Python 3.9+ and add it to PATH.%RST%
+        echo  Download: https://www.python.org/downloads/
+        pause
+        exit /b 1
+    )
+    for /f "tokens=*" %%v in ('python --version 2^>^&1') do echo  Found: %%v
+) else (
+    for /f "tokens=*" %%v in ('py --version 2^>^&1') do echo  Found: %%v
 )
-for /f "tokens=*" %%v in ('python --version 2^>^&1') do echo  Found: %%v
 
 echo.
-echo  Installing / verifying PyInstaller...
-pip install pyinstaller --quiet --disable-pip-version-check
+echo  Installing dependencies (pystray, Pillow, PyInstaller)...
+pip install pyinstaller pystray Pillow --quiet --disable-pip-version-check
 if errorlevel 1 (
     echo %RED%  [ERROR] pip failed. Make sure pip is available.%RST%
     pause
     exit /b 1
 )
 
-echo.
-echo  Installing dependencies (pystray, Pillow, PyInstaller)...
-pip install pyinstaller pystray Pillow --quiet --disable-pip-version-check
-
 echo  Building EXEs (~90 seconds)...
 cd /d "%SCRIPT_DIR%"
-pyinstaller TimesUp.spec --noconfirm >nul 2>&1
+py -m PyInstaller TimesUp.spec --noconfirm >nul 2>&1
 if not exist "%EXE_SRC%" (
     echo %RED%  [ERROR] TimesUp build failed. Run build.bat for full output.%RST%
     pause
     exit /b 1
 )
 echo %GRN%  OK: %EXE_SRC%%RST%
-pyinstaller TimesUpStats.spec --noconfirm >nul 2>&1
+py -m PyInstaller TimesUpStats.spec --noconfirm >nul 2>&1
 if exist "%STATS_SRC%" echo %GRN%  OK: %STATS_SRC%%RST%
-pyinstaller TimesUpTray.spec --noconfirm >nul 2>&1
+py -m PyInstaller TimesUpTray.spec --noconfirm >nul 2>&1
 if exist "%TRAY_SRC%" (
     echo %GRN%  OK: %TRAY_SRC%%RST%
 ) else (
-    echo %YLW%  [WARN] Tray build failed — check pystray/Pillow are installed.%RST%
+    echo %YLW%  [WARN] Tray build failed -- check pystray/Pillow are installed.%RST%
 )
 exit /b 0
 
@@ -290,7 +292,7 @@ set "SNOOZE_ARG="
 set "ONTOP_ARG="
 echo.
 echo %WHT%  Configure your alert%RST%
-echo %DIM%  ─────────────────────%RST%
+echo %DIM%  ---------------------%RST%
 echo.
 echo  Schedule type:
 echo   %WHT%[D]%RST% Daily at a fixed time
@@ -299,14 +301,12 @@ echo   %WHT%[O]%RST% Once (one-time alert)
 echo.
 set /p "SCHED_TYPE=  Choose [D/W/O]: "
 
-:: Task name — allow multiple alerts with different names
 set /p "TASK_LABEL=  Alert name (e.g. 'Bedtime', 'Work End') [default: TimesUp Alert]: "
 if "%TASK_LABEL%"=="" set "TASK_LABEL=TimesUp Alert"
 
 echo.
 :ASK_TIME
 set /p "ALERT_TIME=  Alert time (24h HH:MM, e.g. 22:00): "
-:: Basic format check
 echo %ALERT_TIME% | findstr /r "^[0-2][0-9]:[0-5][0-9]$" >nul
 if errorlevel 1 (
     echo %RED%  Invalid format. Use HH:MM (e.g. 22:30)%RST%
@@ -320,26 +320,25 @@ if /i "%SCHED_TYPE%"=="W" (
 )
 
 echo.
-echo  %RED%Forever Snooze Mode:%RST% SNOOZE button replaces Cancel — re-alerts every 5 min.
+echo  %RED%Forever Snooze Mode:%RST% SNOOZE button replaces Cancel -- re-alerts every 5 min.
 set /p "SNOOZE_CHOICE=  Enable Forever Snooze? [Y/N, default N]: "
 if /i "!SNOOZE_CHOICE!"=="Y" (
     set "SNOOZE_ARG= --snooze"
     echo %YLW%  Snooze mode ON.%RST%
 )
 echo.
-echo  %YLW%On Top Mode:%RST% fullscreen lock — blocks Win key, Alt+Tab, Alt+F4, Ctrl+Esc.
+echo  %YLW%On Top Mode:%RST% fullscreen lock -- blocks Win key, Alt+Tab, Alt+F4, Ctrl+Esc.
 set /p "ONTOP_CHOICE=  Enable On Top Mode? [Y/N, default N]: "
 if /i "!ONTOP_CHOICE!"=="Y" (
     set "ONTOP_ARG= --ontop"
-    echo %YLW%  On Top mode ON — user cannot task-switch away.%RST%
+    echo %YLW%  On Top mode ON -- user cannot task-switch away.%RST%
 )
 exit /b 0
 
-:: COLLECT_TIME_NOPROMPT: used by dedicated mode setups (snooze/ontop pre-set by caller)
 :COLLECT_TIME_NOPROMPT
 echo.
-echo %WHT%  Configure your Forever Snooze alert%RST%
-echo %DIM%  ─────────────────────────────────────%RST%
+echo %WHT%  Configure your alert%RST%
+echo %DIM%  ---------------------%RST%
 echo.
 echo  Schedule type:
 echo   %WHT%[D]%RST% Daily at a fixed time
@@ -365,7 +364,6 @@ if /i "%SCHED_TYPE%"=="W" (
     echo  Day of week: MON TUE WED THU FRI SAT SUN
     set /p "WEEK_DAY=  Day: "
 )
-:: Offer the complementary mode (caller pre-set one; ask about the other)
 if "!SNOOZE_ARG!"=="" (
     echo.
     echo  Also enable %RED%Forever Snooze%RST%? [Y/N, default N]
@@ -374,7 +372,7 @@ if "!SNOOZE_ARG!"=="" (
 )
 if "!ONTOP_ARG!"=="" (
     echo.
-    echo  Also enable %YLW%On Top Mode%RST% ^(fullscreen lock^)? [Y/N, default N]
+    echo  Also enable %YLW%On Top Mode%RST% (fullscreen lock)? [Y/N, default N]
     set /p "_EXTRA_O=  : "
     if /i "!_EXTRA_O!"=="Y" set "ONTOP_ARG= --ontop"
 )
@@ -392,36 +390,24 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
-echo %GRN%  ✓ Scheduled task created!%RST%
+echo %GRN%  Task scheduled!%RST%
 echo.
-echo  %WHT%Task name:%RST%   %TASK_LABEL%
-echo  %WHT%Runs:%RST%        %SCHED_TYPE% at %ALERT_TIME%
-echo  %WHT%Launches:%RST%    %INSTALL_EXE%
-if not "!SNOOZE_ARG!"=="" (
-    echo  %RED%Snooze:%RST%      Forever Snooze — re-alerts every 5 min until shutdown
-)
-if not "!ONTOP_ARG!"=="" (
-    echo  %YLW%On Top:%RST%      Fullscreen lock — blocks Win key / Alt+Tab / Alt+F4
-)
+echo  %WHT%Name:%RST%    %TASK_LABEL%
+echo  %WHT%Runs:%RST%    %SCHED_TYPE% at %ALERT_TIME%
+if not "!SNOOZE_ARG!"=="" echo  %RED%Snooze:%RST%  Forever Snooze ON
+if not "!ONTOP_ARG!"=="" echo  %YLW%OnTop:%RST%   Fullscreen lock ON
 echo.
-echo %DIM%  Manage in: Task Scheduler → Task Scheduler Library%RST%
 exit /b 0
 
 :: ═══════════════════════════════════════════════════════════════════════════
 :DONE
 echo.
-echo %GRN%  ══════════════════════════════════════════%RST%
-echo %GRN%   All done! Time's Up! is ready.%RST%
-echo %GRN%  ══════════════════════════════════════════%RST%
+echo %GRN%  All done! Time's Up! is ready.%RST%
 echo.
-echo  %GRN%Start the Tray Manager%RST% for the full experience:
-echo  %CYAN%  "%TRAY_EXE%"%RST%
-echo  %DIM%  (clock icon in system tray — right-click to manage alerts)%RST%
+echo  Start the Tray Manager: %CYAN%[0]%RST% from this menu
 echo.
-echo  Or:  Test alert   → %CYAN%"%INSTALL_EXE%"%RST%
-echo       View stats   → option %CYAN%[9]%RST% / "%STATS_EXE%"
-echo.
+pause
+goto MENU
 
 :END
-pause
 endlocal

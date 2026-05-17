@@ -353,16 +353,23 @@ def _build_menu():
         if a.get("schedule")=="weekly" and a.get("day"): sched += f" {a['day']}"
         label = f"{a['time']}  {a['name']}  ({sched}){sfx}"
 
-        def _edit_cb(ic, it, idx=i):
-            al = load_alerts()
-            if idx < len(al):
-                root.after(0, lambda a=al[idx], j=idx: show_add_dialog(a, j))
+        def _make_edit(idx):
+            def cb(ic, it):
+                al = load_alerts()
+                if idx < len(al):
+                    root.after(0, lambda a=al[idx], j=idx: show_add_dialog(a, j))
+            return cb
 
-        def _del_cb(ic, it, idx=i):
-            al = load_alerts()
-            if idx < len(al):
-                schtask_delete(al[idx]["name"]); al.pop(idx)
-                save_alerts(al); _refresh_menu()
+        def _make_del(idx):
+            def cb(ic, it):
+                al = load_alerts()
+                if idx < len(al):
+                    schtask_delete(al[idx]["name"]); al.pop(idx)
+                    save_alerts(al); _refresh_menu()
+            return cb
+
+        _edit_cb = _make_edit(i)
+        _del_cb  = _make_del(i)
 
         items.append(pystray.MenuItem(label, pystray.Menu(
             pystray.MenuItem("Edit...",  _edit_cb),
