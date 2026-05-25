@@ -199,23 +199,22 @@ CS = 160
 clock_cv = tk.Canvas(content, width=CS, height=CS, bg=PANEL, highlightthickness=0)
 clock_cv.pack(pady=(0, 28))
 
-def draw_clock(angle_deg):
-    clock_cv.delete("all")
+def _init_clock_static():
     cx = cy = CS // 2
     r = CS // 2 - 6
     THICK = 12
     for dy in range(-r, r + 1):
         dx = int((r**2 - dy**2) ** 0.5)
         clock_cv.create_rectangle(cx - dx, cy + dy, cx + dx, cy + dy + 1,
-                                  fill="#16163a", outline="")
+                                  fill="#16163a", outline="", tags="static")
     for dy in range(-r, r + 1):
         dx_out = int((r**2 - dy**2) ** 0.5)
         ri = r - THICK
         dx_in = int((ri**2 - dy**2) ** 0.5) if abs(dy) <= ri else 0
         clock_cv.create_rectangle(cx - dx_out, cy + dy, cx - dx_in, cy + dy + 1,
-                                  fill=RED, outline="")
+                                  fill=RED, outline="", tags="static")
         clock_cv.create_rectangle(cx + dx_in, cy + dy, cx + dx_out, cy + dy + 1,
-                                  fill=RED, outline="")
+                                  fill=RED, outline="", tags="static")
     for i in range(12):
         a  = math.radians(i * 30 - 90)
         tr = r - THICK - 4
@@ -223,21 +222,29 @@ def draw_clock(angle_deg):
         y1 = cy + int(tr * math.sin(a))
         sz = 4 if i % 3 == 0 else 2
         clock_cv.create_rectangle(x1 - sz, y1 - sz, x1 + sz, y1 + sz,
-                                  fill=WHITE, outline="")
+                                  fill=WHITE, outline="", tags="static")
+
+_init_clock_static()
+
+def draw_clock(angle_deg):
+    clock_cv.delete("hand")
+    cx = cy = CS // 2
+    r = CS // 2 - 6
+    THICK = 12
     a_min = math.radians(angle_deg - 90)
     mlen  = r - THICK - 14
     clock_cv.create_line(cx, cy,
                          cx + int(mlen * math.cos(a_min)),
                          cy + int(mlen * math.sin(a_min)),
-                         fill=WHITE, width=5, capstyle="round")
+                         fill=WHITE, width=5, capstyle="round", tags="hand")
     a_hr = math.radians(angle_deg / 2 - 90)
     hlen = r - THICK - 30
     clock_cv.create_line(cx, cy,
                          cx + int(hlen * math.cos(a_hr)),
                          cy + int(hlen * math.sin(a_hr)),
-                         fill=CYAN, width=5, capstyle="round")
+                         fill=CYAN, width=5, capstyle="round", tags="hand")
     clock_cv.create_rectangle(cx - 5, cy - 5, cx + 5, cy + 5,
-                              fill=CYAN, outline="")
+                              fill=CYAN, outline="", tags="hand")
 
 # ── Title ──────────────────────────────────────────────────────────────────────
 tk.Label(content, text="TIME IS UP!", font=(PF, 22),
@@ -252,24 +259,32 @@ tk.Label(content, textvariable=sub_var, font=(PF, 9),
          bg=PANEL, fg=CYAN).pack(pady=(0, 28))
 
 # ── Buttons ────────────────────────────────────────────────────────────────────
+_focus = [0]
+_btns  = []   # {"cv", "draw", "face", "cmd"}
+
 def make_btn(parent, label, cmd, face, hover):
     BW, BH, SH = 240, 60, 6
+    idx = len(_btns)
     cv = tk.Canvas(parent, width=BW, height=BH, bg=PANEL, highlightthickness=0)
 
-    def draw(fill):
+    def draw(fill, focused=False):
         cv.delete("all")
         cv.create_rectangle(SH, SH, BW, BH, fill="#000000", outline="")
         cv.create_rectangle(0, 0, BW - SH, BH - SH, fill=fill, outline="")
+        if focused:
+            cv.create_rectangle(3, 3, BW - SH - 3, BH - SH - 3,
+                               outline=CYAN, width=2)
         cv.create_rectangle(0, 0, 4, 4, fill=PANEL, outline="")
         cv.create_rectangle(BW-SH-4, BH-SH-4, BW-SH, BH-SH, fill=PANEL, outline="")
         cv.create_text((BW - SH) // 2, (BH - SH) // 2,
                        text=label, fill=WHITE, font=(PF, 10))
 
     draw(face)
-    cv.bind("<Enter>",           lambda e: draw(hover))
-    cv.bind("<Leave>",           lambda e: draw(face))
+    cv.bind("<Enter>",           lambda e: draw(hover, _focus[0] == idx))
+    cv.bind("<Leave>",           lambda e: draw(face,  _focus[0] == idx))
     cv.bind("<ButtonPress-1>",   lambda e: cv.move("all", SH // 2, SH // 2))
     cv.bind("<ButtonRelease-1>", lambda e: (cv.move("all", -(SH//2), -(SH//2)), cmd()))
+    _btns.append({"cv": cv, "draw": draw, "face": face, "cmd": cmd})
     return cv
 
 btn_row = tk.Frame(content, bg=PANEL)
@@ -282,6 +297,28 @@ make_btn(btn_row,
          cancel,
          AMBER if SNOOZE_MODE else DIM,
          AMBER2 if SNOOZE_MODE else DIM2).pack(side="left", padx=22)
+
+def _set_focus(idx):
+    _focus[0] = idx % len(_btns)
+    for i, b in enumerate(_btns):
+        b["draw"](b["face"], focused=(i == _focus[0]))
+
+def _activate():
+    _btns[_focus[0]]["cmd"]()
+
+def _on_key(e):
+    k = e.keysym
+    if k in ("Left", "a", "A"):
+        _set_focus(_focus[0] - 1)
+    elif k in ("Right", "d", "D"):
+        _set_focus(_focus[0] + 1)
+    elif k == "Return":
+        _activate()
+
+for _k in ("<Left>", "<Right>", "<a>", "<A>", "<d>", "<D>", "<Return>"):
+    root.bind(_k, _on_key)
+_set_focus(0)
+root.focus_force()
 
 # ── Warning label ──────────────────────────────────────────────────────────────
 warn_var = tk.StringVar(
@@ -331,8 +368,27 @@ def animate():
 
     root.after(350, animate)
 
+def _assert_topmost():
+    try:
+        hwnd = ctypes.windll.user32.GetAncestor(root.winfo_id(), 2)  # GA_ROOT
+        ctypes.windll.user32.SetWindowPos(
+            hwnd, -1, 0, 0, 0, 0,
+            0x0002 | 0x0001 | 0x0010)  # NOMOVE|NOSIZE|NOACTIVATE
+    except Exception:
+        pass
+    root.after(1000, _assert_topmost)
+
 if ON_TOP_MODE:
     threading.Thread(target=_install_keyboard_hook, daemon=True).start()
+    root.update_idletasks()
+    try:
+        hwnd = ctypes.windll.user32.GetAncestor(root.winfo_id(), 2)
+        ctypes.windll.user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0,
+                                          0x0002 | 0x0001 | 0x0040)  # +SHOWWINDOW
+        ctypes.windll.user32.SetForegroundWindow(hwnd)
+    except Exception:
+        pass
+    _assert_topmost()
 
 animate()
 root.mainloop()
