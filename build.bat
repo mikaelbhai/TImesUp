@@ -41,10 +41,25 @@ if not exist "dist\TimesUpTray.exe" (
     echo        OK: dist\TimesUpTray.exe
 )
 
+echo [5/5] Building installer (requires Inno Setup)...
+where iscc >nul 2>&1
+if errorlevel 1 (
+    echo [SKIP] iscc not found — skipping installer.
+    echo        Get Inno Setup: https://jrsoftware.org/isdl.php
+) else (
+    iscc installer.iss
+    if exist "Output\TimesUpInstaller-v*.exe" (
+        echo        OK: Output\TimesUpInstaller-v*.exe
+    ) else (
+        echo [WARN] Installer build failed.
+    )
+)
+
 echo.
-echo [5/5] Done!
-echo   Alert:  dist\TimesUp.exe
-echo   Stats:  dist\TimesUpStats.exe
-echo   Tray:   dist\TimesUpTray.exe
+echo Done!
+echo   Alert:     dist\TimesUp.exe
+echo   Stats:     dist\TimesUpStats.exe
+echo   Tray:      dist\TimesUpTray.exe
+echo   Installer: Output\TimesUpInstaller-v*.exe  (if Inno Setup was found)
 echo.
 pause
