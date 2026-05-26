@@ -27,7 +27,6 @@ DisableProgramGroupPage=no
 OutputDir=Output
 OutputBaseFilename=TimesUpInstaller-v{#MyAppVersion}
 WizardStyle=modern
-WizardResizable=no
 DisableWelcomePage=no
 LicenseFile=OFL.txt
 
@@ -56,19 +55,17 @@ Name: "{group}\Uninstall {#MyAppName}";      Filename: "{uninstallexe}"
 
 ; ── Run after install ─────────────────────────────────────────────────────────
 [Run]
-Filename: "{app}\TimesUpTray.exe";
-  Description: "Launch the Tray Manager now (recommended)";
-  Flags: nowait postinstall skipifsilent
+Filename: "{app}\TimesUpTray.exe"; Description: "Launch the Tray Manager now (recommended)"; Flags: nowait postinstall skipifsilent
 
 ; ── Uninstall cleanup ─────────────────────────────────────────────────────────
 [UninstallRun]
 ; Kill running processes gracefully
-Filename: "taskkill"; Parameters: "/f /im TimesUpTray.exe";  Flags: runhidden
-Filename: "taskkill"; Parameters: "/f /im TimesUp.exe";      Flags: runhidden
-Filename: "taskkill"; Parameters: "/f /im TimesUpStats.exe"; Flags: runhidden
+Filename: "taskkill"; Parameters: "/f /im TimesUpTray.exe";  Flags: runhidden; RunOnceId: "KillTray"
+Filename: "taskkill"; Parameters: "/f /im TimesUp.exe";      Flags: runhidden; RunOnceId: "KillAlert"
+Filename: "taskkill"; Parameters: "/f /im TimesUpStats.exe"; Flags: runhidden; RunOnceId: "KillStats"
 ; Remove any scheduled tasks created by the app
-Filename: "schtasks"; Parameters: "/delete /tn ""TimesUp Alert"" /f"; Flags: runhidden
-Filename: "schtasks"; Parameters: "/delete /tn ""TimesUp Snooze"" /f"; Flags: runhidden
+Filename: "schtasks"; Parameters: "/delete /tn ""TimesUp Alert"" /f"; Flags: runhidden; RunOnceId: "DelTaskAlert"
+Filename: "schtasks"; Parameters: "/delete /tn ""TimesUp Snooze"" /f"; Flags: runhidden; RunOnceId: "DelTaskSnooze"
 
 [UninstallDelete]
 ; Remove log + config left in AppData\Local\TimesUp
