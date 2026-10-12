@@ -44,8 +44,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 ; ── Files ─────────────────────────────────────────────────────────────────────
 [Files]
 Source: "dist\TimesUp.exe";      DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\TimesUpStats.exe"; DestDir: "{app}"; Flags: ignoreversion; Check: FileExists(ExpandConstant('{src}\dist\TimesUpStats.exe'))
-Source: "dist\TimesUpTray.exe";  DestDir: "{app}"; Flags: ignoreversion; Check: FileExists(ExpandConstant('{src}\dist\TimesUpTray.exe'))
+; skipifsourcedoesntexist is evaluated when the installer is compiled; a Check:
+; on {src} would look next to the installer at install time and always skip.
+Source: "dist\TimesUpStats.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "dist\TimesUpTray.exe";  DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 ; ── Start Menu shortcuts ──────────────────────────────────────────────────────
 [Icons]
