@@ -5,7 +5,7 @@ a = Analysis(
     ['tray.py'],
     pathex=[],
     binaries=[],
-    datas=collect_data_files('pystray'),
+    datas=collect_data_files('pystray') + [('font_data.py', '.')],
     hiddenimports=[
         'pystray._win32',
         'PIL._imaging',

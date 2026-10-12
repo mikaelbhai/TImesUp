@@ -69,11 +69,12 @@ schtasks /create /tn "TimesUp Alert" /tr "\"%LOCALAPPDATA%\TimesUp\TimesUp.exe\"
 
 | Item | Action |
 |------|--------|
-| Add Alert... | Opens a styled dialog to create a new alert |
-| Manage Alerts... | List, edit, and delete all alerts |
-| Scheduled Alerts | Submenu showing each alert with Edit / Delete |
+| *Next: ...* | Shows the next alert and a live countdown (also in the icon tooltip) |
+| Add Alert... | Opens a styled dialog to create a new alert (also: double-click the icon) |
+| Manage Alerts... | List, enable/disable, edit, and delete all alerts |
+| Scheduled Alerts | Submenu showing each alert with Enabled / Edit / Delete |
 | Stats & Log | Launches the stats viewer |
-| Test Alert Now | Fires the alert immediately |
+| Test Alert | Fires the alert immediately: Standard, On Top (lock), or Silent |
 | Start with Windows | Toggle auto-start on login (writes to registry Run key) |
 | Exit | Remove from tray |
 
@@ -81,13 +82,14 @@ schtasks /create /tn "TimesUp Alert" /tr "\"%LOCALAPPDATA%\TimesUp\TimesUp.exe\"
 
 | Field | Description |
 |-------|-------------|
-| Alert name | Identifies the task in Task Scheduler and the tray menu |
-| Time (HH:MM) | 24h time the alert fires |
-| Schedule | Daily / Weekly (pick a day) / Once |
+| Alert name | Shown in the alert's title bar and the tray menu; must be unique |
+| Time (24h) | Type `HH:MM`, or nudge with the -15/+15/-1H/+1H buttons, arrow keys, or mouse wheel |
+| Repeat | Daily / Weekly (pick a day) / Once (must be later today) |
 | Forever Snooze | Re-alerts every 5 min until user shuts down |
 | On Top Mode | Fullscreen lock + keyboard hook |
+| Play Tone | Short chiptune jingle when the alert opens (on by default) |
 
-Alerts created via the tray are stored in `%LOCALAPPDATA%\TimesUp\alerts.json` and registered in Task Scheduler simultaneously. Alerts created by `setup.bat` are in Task Scheduler only (not shown in the tray's Manage dialog, but still fire normally).
+Alerts created via the tray are stored in `%LOCALAPPDATA%\TimesUp\alerts.json` and registered in Task Scheduler simultaneously, under a `\TimesUp\` task folder (so the uninstaller can remove them all). Disabling an alert keeps it but stops it from firing. If Task Scheduler rejects an alert, the dialog shows its error instead of failing silently. Alerts created by `setup.bat` are in Task Scheduler only (not shown in the tray's Manage dialog, but still fire normally).
 
 **Dependencies (auto-installed by `build.bat` and `setup.bat`):** `pystray`, `Pillow`
 
@@ -98,7 +100,7 @@ Alerts created via the tray are stored in `%LOCALAPPDATA%\TimesUp\alerts.json` a
 Enable this to make the alert **inescapable** — the user cannot dismiss it, only delay it.
 
 - The **CANCEL** button is replaced with **SNOOZE (5 MIN)**
-- Clicking Snooze schedules the alert to fire again exactly 5 minutes later via Task Scheduler
+- Clicking Snooze re-launches the alert in the background to fire again exactly 5 minutes later (works with any system date format)
 - This repeats until the user clicks **SHUT DOWN**
 - Escape key is still bound to Snooze (not dismiss) in this mode
 
@@ -153,8 +155,9 @@ PyInstaller is installed automatically by `setup.bat` / `build.bat`.
 
 ## What happens when it fires
 
-- A borderless fullscreen-style window appears on top of everything (always-on-top)
-- An animated pixel clock spins with a pulsing red border
+- A borderless window appears on top of everything (always-on-top) with a short chiptune jingle (`--quiet` mutes it)
+- An animated pixel-art clock spins inside a pulsing red CRT-style frame; the title bar shows the alert name and current time
+- Keyboard: **Left/Right/A/D/Tab** move focus, **Enter** confirms
 - **SHUT DOWN** — initiates `shutdown /s /t 30` (30-second grace period, cancellable with `shutdown /a`)
 - **CANCEL** — dismisses the alert with no action
 - **Escape key** — same as Cancel
@@ -172,22 +175,24 @@ Every time an alert fires and the user takes action, a record is written to:
 Each line is a JSON object:
 
 ```json
-{"ts": "2026-05-13T22:00:00", "action": "shutdown", "mode": ["snooze","ontop"], "elapsed": 12.3}
+{"ts": "2026-05-13T22:00:00", "action": "shutdown", "mode": ["snooze","ontop"], "name": "Bed time", "elapsed": 12.3}
 ```
 
 | Field | Values |
 |-------|--------|
 | `action` | `shutdown` / `snooze` / `cancel` |
 | `mode` | list of active flags (`snooze`, `ontop`) |
+| `name` | alert name (empty for alerts made outside the tray) |
 | `elapsed` | seconds between alert appearing and action |
 
 **To view stats:** run `setup.bat → [9]` or launch `TimesUpStats.exe` directly.
 
 The stats window shows:
-- Summary boxes: total, shutdowns, snoozes, cancels, shutdown %, avg response time
-- 21-day stacked bar chart (red = shutdown, amber = snooze, grey = cancel)
-- Scrollable recent log with timestamps, actions, and modes
-- **Clear Log** button (irreversible)
+- Summary cards: total, shutdowns, snoozes, cancels, shutdown %, streak (consecutive days where every alert ended in shutdown), avg response time
+- 21-day stacked bar chart with per-day totals (red = shutdown, amber = snooze, grey = cancel)
+- Scrollable recent log in aligned columns (date, time, action, response, mode); mouse wheel works anywhere
+- **Clear Log** button: click twice to confirm (irreversible)
+- Drag the title bar to move the window; **Escape** closes it
 
 ---
 

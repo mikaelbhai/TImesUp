@@ -3,7 +3,7 @@
 ; Build: iscc installer.iss   →   Output\TimesUpInstaller.exe
 
 #define MyAppName    "Time's Up!"
-#define MyAppVersion "1.1"
+#define MyAppVersion "1.2"
 #define MyAppSlug    "TimesUp"
 #define MyAppPublisher "mikaelbhai"
 #define MyAppURL     "https://github.com/mikaelbhai/TImesUp"
@@ -66,6 +66,9 @@ Filename: "taskkill"; Parameters: "/f /im TimesUpStats.exe"; Flags: runhidden; R
 ; Remove any scheduled tasks created by the app
 Filename: "schtasks"; Parameters: "/delete /tn ""TimesUp Alert"" /f"; Flags: runhidden; RunOnceId: "DelTaskAlert"
 Filename: "schtasks"; Parameters: "/delete /tn ""TimesUp Snooze"" /f"; Flags: runhidden; RunOnceId: "DelTaskSnooze"
+Filename: "schtasks"; Parameters: "/delete /tn ""TimesUp_Snooze"" /f"; Flags: runhidden; RunOnceId: "DelTaskSnoozeLegacy"
+; Alerts made in the Tray Manager live in the \TimesUp\ Task Scheduler folder
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""Get-ScheduledTask -TaskPath '\TimesUp\' -ErrorAction SilentlyContinue | Unregister-ScheduledTask -Confirm:$false"""; Flags: runhidden; RunOnceId: "DelTaskFolder"
 
 [UninstallDelete]
 ; Remove log + config left in AppData\Local\TimesUp
@@ -75,7 +78,7 @@ Type: filesandordirs; Name: "{localappdata}\TimesUp"
 [Messages]
 WelcomeLabel1=Welcome to the [name] Setup Wizard
 WelcomeLabel2=This will install [name/ver] on your computer.%n%nTime's Up! shows a full-screen shutdown alert at a scheduled time — impossible to miss.%n%nClick Next to continue.
-FinishedLabel=Time's Up! has been installed.%n%nThe Tray Manager lets you schedule alerts, toggle Snooze and On Top modes, and view your activity log.
+FinishedLabel=Time's Up! has been installed.%n%nThe Tray Manager lets you schedule alerts, toggle Snooze, On Top and sound per alert, and view your stats and activity log.
 
 [Code]
 // ── At uninstall: also remove any schtasks whose name starts with "TimesUp" ──
@@ -87,5 +90,7 @@ begin
   begin
     Exec('schtasks', '/delete /tn "TimesUp Alert" /f',  '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Exec('schtasks', '/delete /tn "TimesUp Snooze" /f', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    // "Start with Windows" entry written by the Tray Manager
+    RegDeleteValue(HKEY_CURRENT_USER, 'Software\Microsoft\Windows\CurrentVersion\Run', 'TimesUpTray');
   end;
 end;
