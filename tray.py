@@ -586,7 +586,9 @@ def _tick():
 
 def _launch(path, *args):
     if os.path.exists(path):
-        subprocess.Popen([path, *args])
+        # fresh PyInstaller environment so the child doesn't touch our _MEI dir
+        subprocess.Popen([path, *args],
+                         env=dict(os.environ, PYINSTALLER_RESET_ENVIRONMENT="1"))
     else:
         messagebox.showwarning("TimesUp", f"Not found:\n{path}\n\nRun setup.bat to build/install.")
 

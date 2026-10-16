@@ -209,7 +209,10 @@ def cancel():
             elif a == "--delay": skip = True
             else:               args.append(a)
         cmd += args + ["--delay", str(SNOOZE_SECS)]
+        # PYINSTALLER_RESET_ENVIRONMENT makes a frozen child unpack its own
+        # _MEI temp dir; otherwise it reuses ours, which is deleted when we exit.
         subprocess.Popen(cmd, close_fds=True,
+                         env=dict(os.environ, PYINSTALLER_RESET_ENVIRONMENT="1"),
                          creationflags=0x00000008 | 0x00000200)  # DETACHED | NEW_GROUP
     root.destroy(); sys.exit(0)
 

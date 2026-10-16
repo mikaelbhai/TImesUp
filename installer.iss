@@ -3,7 +3,7 @@
 ; Build: iscc installer.iss   →   Output\TimesUpInstaller.exe
 
 #define MyAppName    "Time's Up!"
-#define MyAppVersion "1.2"
+#define MyAppVersion "1.2.1"
 #define MyAppSlug    "TimesUp"
 #define MyAppPublisher "mikaelbhai"
 #define MyAppURL     "https://github.com/mikaelbhai/TImesUp"
